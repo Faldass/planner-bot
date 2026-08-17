@@ -1,0 +1,17 @@
+{
+  "name": "guild-boss-planner-bot",
+  "version": "1.0.0",
+  "description": "Bot Discord pour planifier les créneaux d'attaque de boss de guilde avec soigneurs.",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "deploy": "node src/deploy-commands.js",
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "discord.js": "^14.15.3",
+    "dotenv": "^16.4.5",
+    "node-cron": "^3.0.3"
+  }
+}
