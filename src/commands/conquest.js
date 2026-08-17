@@ -11,7 +11,7 @@ const {
   dateStrUTC,
   generateSlotsForDate,
   slotsInBlock,
-  formatSlotRange,
+  formatSlotTime,
   formatSlotLabel,
 } = require("../slotUtils");
 const {
@@ -53,7 +53,7 @@ function buildConquestMessage(interaction, dayOffset) {
 
   if (slotsWithHealers.length === 0) {
     embed.setDescription(
-      `No slot has a ${SAGE.name} available yet for this day. Check back later!`
+      `No session has a ${SAGE.name} available yet for this day. Check back later!`
     );
   } else {
     embed.setDescription(
@@ -64,7 +64,7 @@ function buildConquestMessage(interaction, dayOffset) {
           const classIcons = dpsSignups.length
             ? dpsSignups.map((d) => getEmojiForClassKey(guild, settings, d.class_key)).join("")
             : "–";
-          const line = `${formatSlotRange(s)} — ${sageEmoji}×${s.healer_count}  ${classIcons} (${s.signup_count})`;
+          const line = `${formatSlotTime(s)} — ${sageEmoji}×${s.healer_count}  ${classIcons} (${s.signup_count})`;
           return involved ? `🟢 **${line}**` : `▫️ ${line}`;
         })
         .join("\n")
@@ -73,8 +73,8 @@ function buildConquestMessage(interaction, dayOffset) {
 
   embed.setFooter({
     text: isSage
-      ? `🟢 = slots you've made available. Pick more below (max ${MAX_HEALER_SLOTS_PER_DAY}/day).`
-      : `🟢 = slots you've picked. Pick up to ${MAX_SIGNUPS_PER_DAY}/day below — uncheck then recheck to change.`,
+      ? `🟢 = sessions you've made available. Pick more below (max ${MAX_HEALER_SLOTS_PER_DAY}/day).`
+      : `🟢 = sessions you've picked. Pick up to ${MAX_SIGNUPS_PER_DAY}/day below — uncheck then recheck to change.`,
   });
 
   const dayRow = new ActionRowBuilder().addComponents(
@@ -120,7 +120,7 @@ function buildConquestMessage(interaction, dayOffset) {
     chunks.forEach((chunk, idx) => {
       const menu = new StringSelectMenuBuilder()
         .setCustomId(`signup_select_${dateStr}_${idx}`)
-        .setPlaceholder("Pick one or two slots")
+        .setPlaceholder("Pick one or two sessions")
         .setMinValues(0)
         .setMaxValues(Math.min(MAX_SIGNUPS_PER_DAY, chunk.length))
         .addOptions(
