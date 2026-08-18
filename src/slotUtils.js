@@ -45,11 +45,11 @@ function slotsInBlock(slots, block) {
 }
 
 /**
- * Formats a slot as readable text using Discord dynamic timestamps.
- * Example: <t:1234:t> - <t:1235:t>
+ * Formats a session's start time as a Discord dynamic timestamp, e.g. 13:00
+ * shown in each viewer's own local time.
  */
-function formatSlotRange(slot) {
-  return `<t:${slot.start_utc}:t> - <t:${slot.end_utc}:t>`;
+function formatSlotTime(slot) {
+  return `<t:${slot.start_utc}:t>`;
 }
 
 function formatSlotLabel(slot) {
@@ -67,6 +67,6 @@ module.exports = {
   dateStrUTC,
   generateSlotsForDate,
   slotsInBlock,
-  formatSlotRange,
+  formatSlotTime,
   formatSlotLabel,
 };

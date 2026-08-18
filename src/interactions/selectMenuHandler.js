@@ -69,7 +69,7 @@ async function handleSelectMenu(interaction) {
 
     if (truncated) {
       await interaction.followUp({
-        content: `⚠️ You can select at most ${MAX_HEALER_SLOTS_PER_DAY} slots per day in total. Extra selections were ignored.`,
+        content: `⚠️ You can select at most ${MAX_HEALER_SLOTS_PER_DAY} sessions per day in total. Extra selections were ignored.`,
         ephemeral: true,
       });
     }
@@ -90,9 +90,9 @@ async function handleSelectMenu(interaction) {
         interaction.client,
         interaction.guildId,
         affectedPlayers,
-        `⚠️ **Slot cancelled** (<t:${slot.start_utc}:t> - <t:${slot.end_utc}:t>): ` +
-          `no ${SAGE.name} is available for this slot anymore. Your signup was removed, ` +
-          `please pick another slot with \`/conquest\`.`
+        `⚠️ **Session cancelled** (<t:${slot.start_utc}:t>): ` +
+          `no ${SAGE.name} is available for this session anymore. Your signup was removed, ` +
+          `please pick another session with \`/conquest\`.`
       );
     }
     return;
@@ -143,7 +143,7 @@ async function handleSelectMenu(interaction) {
 
     if (blocked) {
       await interaction.followUp({
-        content: `⚠️ You've reached the limit of ${MAX_SIGNUPS_PER_DAY} slots for this day. Deselect one first if you want to change.`,
+        content: `⚠️ You've reached the limit of ${MAX_SIGNUPS_PER_DAY} sessions for this day. Deselect one first if you want to change.`,
         ephemeral: true,
       });
     }

@@ -31,7 +31,7 @@ function buildReadyCheckMessage(guild, settings, slot, healers, dpsDetails, read
   const embed = new EmbedBuilder()
     .setTitle("🐉 Boss attack starting now!")
     .setDescription(
-      `Slot: <t:${slot.start_utc}:t> - <t:${slot.end_utc}:t>\n\nClick the button below when you're ready to attack.`
+      `Session: <t:${slot.start_utc}:t>\n\nClick the button below when you're ready to attack.`
     )
     .addFields(
       { name: `${sageEmoji} ${SAGE.name}`, value: formatHealers(healers), inline: true },

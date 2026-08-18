@@ -56,9 +56,6 @@ async function checkAndNotify(client, guildId, minutesBefore) {
       // Already notified -> don't spam.
       if (isSlotNotified(slot.id)) continue;
 
-      // Nobody signed up yet: retry next minute in case someone joins.
-      if (slot.signup_count === 0) continue;
-
       const { healers, dps } = getSlotParticipants(slot.id);
 
       // Mark as notified BEFORE sending, to avoid double sends if two
@@ -77,7 +74,7 @@ async function checkAndNotify(client, guildId, minutesBefore) {
       await channel.send({
         content:
           `⚔️ **Boss attack in ${minutesBefore} minutes!** ` +
-          `(<t:${slot.start_utc}:t> - <t:${slot.end_utc}:t>)\n` +
+          `(<t:${slot.start_utc}:t>)\n` +
           `${sageEmoji} ${SAGE.name}(s): ${healerMentions}\n` +
           `⚔️ Players: ${dpsMentions}`,
         allowedMentions: { users: [...new Set([...healers, ...dps])] },
@@ -86,4 +83,4 @@ async function checkAndNotify(client, guildId, minutesBefore) {
   }
 }
 
-module.exports = { startNotifier };
+module.exports = { startNotifier, checkAndNotify };
