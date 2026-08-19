@@ -61,6 +61,18 @@ function formatSlotLabel(slot) {
   return `${hh}:${mm} UTC`;
 }
 
+/**
+ * Formats a slot's date + time using Discord's own dynamic timestamp
+ * styles, so both automatically adapt to each viewer's Discord client
+ * language and timezone. Discord's short-date style always includes the
+ * year (there's no native "day/month only" style), but it stays numeric
+ * and locale-aware, e.g. "17/08/2026" for French clients or "8/17/2026"
+ * for US-English ones.
+ */
+function formatSlotDateTime(slot) {
+  return `<t:${slot.start_utc}:d> <t:${slot.start_utc}:t>`;
+}
+
 module.exports = {
   SLOT_MINUTES,
   BLOCKS,
@@ -69,4 +81,5 @@ module.exports = {
   slotsInBlock,
   formatSlotTime,
   formatSlotLabel,
+  formatSlotDateTime,
 };

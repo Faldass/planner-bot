@@ -1,4 +1,4 @@
-const { generateSlotsForDate, slotsInBlock, BLOCKS, dateStrUTC } = require("../slotUtils");
+const { generateSlotsForDate, slotsInBlock, BLOCKS, dateStrUTC, formatSlotDateTime } = require("../slotUtils");
 const {
   setHealerAvailabilityForBlock,
   getHealerSlotIdsForUser,
@@ -9,6 +9,7 @@ const {
   getDpsUserIdsForSlot,
   removeAllSignupsForSlot,
   getSlotById,
+  getSlotParticipants,
   getGuildSettings,
 } = require("../db");
 const {
@@ -17,6 +18,7 @@ const {
   MAX_SIGNUPS_PER_DAY,
 } = require("../commands/conquest");
 const { notifyPlayers } = require("../notifyUtil");
+const { buildNewSessionMessage } = require("../newSessionMessage");
 const { getMemberClass, getClassByKey, getEmojiForClass } = require("../classes");
 
 const SAGE = getClassByKey("healer");
@@ -74,6 +76,24 @@ async function handleSelectMenu(interaction) {
       });
     }
 
+    // Announce every newly added session in the notification channel, with
+    // a one-click sign-up button for players.
+    const addedIds = finalSelection.filter((slotId) => !existingAllForDay.has(slotId));
+    if (addedIds.length > 0 && settings && settings.notify_channel_id) {
+      const channel = await interaction.client.channels
+        .fetch(settings.notify_channel_id)
+        .catch(() => null);
+      if (channel) {
+        for (const slotId of addedIds) {
+          const newSlot = getSlotById(slotId);
+          const { healers, dpsDetails } = getSlotParticipants(slotId);
+          await channel.send(
+            buildNewSessionMessage(interaction.guild, settings, newSlot, healers, dpsDetails)
+          );
+        }
+      }
+    }
+
     // For each slot this healer just removed: if NO healer is left available
     // on it and players were already signed up, cancel their signups and
     // notify them.
@@ -90,7 +110,7 @@ async function handleSelectMenu(interaction) {
         interaction.client,
         interaction.guildId,
         affectedPlayers,
-        `⚠️ **Session cancelled** (<t:${slot.start_utc}:t>): ` +
+        `⚠️ **Session cancelled** (${formatSlotDateTime(slot)}): ` +
           `no ${SAGE.name} is available for this session anymore. Your signup was removed, ` +
           `please pick another session with \`/conquest\`.`
       );
