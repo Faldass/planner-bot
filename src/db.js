@@ -60,9 +60,30 @@ CREATE TABLE IF NOT EXISTS guild_settings (
   dps_role_id_1 TEXT,
   dps_role_id_2 TEXT,
   notify_channel_id TEXT,
-  ready_channel_id TEXT
+  ready_channel_id TEXT,
+  nemesis_role_id TEXT,
+  nemesis_ping_enabled INTEGER NOT NULL DEFAULT 1
 );
 `);
+
+// Lightweight migration: add any columns introduced after a guild's data.db
+// was first created, so existing deployments don't break when the schema
+// grows (CREATE TABLE IF NOT EXISTS alone only helps brand-new databases).
+{
+  const existingColumns = db.prepare("PRAGMA table_info(guild_settings)").all().map((c) => c.name);
+  const columnMigrations = [
+    { name: "nemesis_role_id", ddl: "ALTER TABLE guild_settings ADD COLUMN nemesis_role_id TEXT" },
+    {
+      name: "nemesis_ping_enabled",
+      ddl: "ALTER TABLE guild_settings ADD COLUMN nemesis_ping_enabled INTEGER NOT NULL DEFAULT 1",
+    },
+  ];
+  for (const migration of columnMigrations) {
+    if (!existingColumns.includes(migration.name)) {
+      db.exec(migration.ddl);
+    }
+  }
+}
 
 // --- Guild settings (configured through /setup) ---
 
@@ -73,15 +94,17 @@ function getGuildSettings(guildId) {
 function upsertGuildSettings(guildId, settings) {
   db.prepare(
     `INSERT INTO guild_settings
-       (guild_id, healer_role_id, tank_role_id, dps_role_id_1, dps_role_id_2, notify_channel_id, ready_channel_id)
-     VALUES (@guild_id, @healer_role_id, @tank_role_id, @dps_role_id_1, @dps_role_id_2, @notify_channel_id, @ready_channel_id)
+       (guild_id, healer_role_id, tank_role_id, dps_role_id_1, dps_role_id_2, notify_channel_id, ready_channel_id, nemesis_role_id, nemesis_ping_enabled)
+     VALUES (@guild_id, @healer_role_id, @tank_role_id, @dps_role_id_1, @dps_role_id_2, @notify_channel_id, @ready_channel_id, @nemesis_role_id, @nemesis_ping_enabled)
      ON CONFLICT(guild_id) DO UPDATE SET
        healer_role_id = excluded.healer_role_id,
        tank_role_id = excluded.tank_role_id,
        dps_role_id_1 = excluded.dps_role_id_1,
        dps_role_id_2 = excluded.dps_role_id_2,
        notify_channel_id = excluded.notify_channel_id,
-       ready_channel_id = excluded.ready_channel_id`
+       ready_channel_id = excluded.ready_channel_id,
+       nemesis_role_id = excluded.nemesis_role_id,
+       nemesis_ping_enabled = excluded.nemesis_ping_enabled`
   ).run({
     guild_id: guildId,
     healer_role_id: settings.healer_role_id || null,
@@ -90,6 +113,8 @@ function upsertGuildSettings(guildId, settings) {
     dps_role_id_2: settings.dps_role_id_2 || null,
     notify_channel_id: settings.notify_channel_id || null,
     ready_channel_id: settings.ready_channel_id || null,
+    nemesis_role_id: settings.nemesis_role_id || null,
+    nemesis_ping_enabled: settings.nemesis_ping_enabled == null ? 1 : settings.nemesis_ping_enabled,
   });
 }
 
@@ -319,6 +344,37 @@ function getReadyUserIds(slotId) {
     .map((r) => r.user_id);
 }
 
+/**
+ * Deletes every slot (and its related rows: healer availabilities, signups,
+ * notification/ready-check history) for any date other than today or
+ * tomorrow — i.e. keeps only what /conquest can currently show, and clears
+ * out everything older. Guild settings (from /setup) are never touched.
+ * Returns the number of slots deleted.
+ */
+function cleanupOldData() {
+  const todayStr = gameDayStr(0);
+  const tomorrowStr = gameDayStr(1);
+
+  const tx = db.transaction(() => {
+    const dependentTables = [
+      "healer_availabilities",
+      "signups",
+      "notified_slots",
+      "ready_prompts",
+      "ready_status",
+    ];
+    for (const table of dependentTables) {
+      db.prepare(
+        `DELETE FROM ${table} WHERE slot_id IN (SELECT id FROM slots WHERE date NOT IN (?, ?))`
+      ).run(todayStr, tomorrowStr);
+    }
+    return db.prepare("DELETE FROM slots WHERE date NOT IN (?, ?)").run(todayStr, tomorrowStr)
+      .changes;
+  });
+
+  return tx();
+}
+
 module.exports = {
   db,
   getGuildSettings,
@@ -346,4 +402,5 @@ module.exports = {
   markReadyPromptPosted,
   toggleReady,
   getReadyUserIds,
+  cleanupOldData,
 };

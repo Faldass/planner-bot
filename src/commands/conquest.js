@@ -8,7 +8,7 @@ const {
 } = require("discord.js");
 const {
   BLOCKS,
-  dateStrUTC,
+  gameDayStr,
   generateSlotsForDate,
   slotsInBlock,
   formatSlotTime,
@@ -39,7 +39,7 @@ function buildConquestMessage(interaction, dayOffset) {
   const memberClass = getMemberClass(member, settings);
   const isSage = !!(memberClass && memberClass.isHealer);
 
-  const dateStr = dateStrUTC(dayOffset);
+  const dateStr = gameDayStr(dayOffset);
   const slotsWithHealers = getSlotsWithHealers(dateStr);
 
   const mySignupIds = new Set(getUserSignupSlotIdsForDate(interaction.user.id, dateStr));
@@ -92,13 +92,16 @@ function buildConquestMessage(interaction, dayOffset) {
 
   if (isSage) {
     // Same block selects as the old /healer-availability, letting the Sage
-    // create/edit their own slots.
+    // create/edit their own slots. Each block's placeholder is derived from
+    // the actual UTC times of its first/last slot (the reset's UTC offset
+    // shifts with DST, so this can't be a static label).
     const allSlots = generateSlotsForDate(dateStr);
     for (const b of BLOCKS) {
       const blockSlots = slotsInBlock(allSlots, b);
+      const rangeLabel = `${formatSlotLabel(blockSlots[0])} → ${formatSlotLabel(blockSlots[blockSlots.length - 1])}`;
       const menu = new StringSelectMenuBuilder()
         .setCustomId(`heal_avail_${dateStr}_${b.key}`)
-        .setPlaceholder(b.label)
+        .setPlaceholder(rangeLabel)
         .setMinValues(0)
         .setMaxValues(Math.min(MAX_HEALER_SLOTS_PER_DAY, blockSlots.length))
         .addOptions(

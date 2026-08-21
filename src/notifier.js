@@ -1,5 +1,5 @@
 const cron = require("node-cron");
-const { dateStrUTC } = require("./slotUtils");
+const { gameDayStr } = require("./slotUtils");
 const {
   getSlotsWithHealers,
   getSlotParticipants,
@@ -44,7 +44,7 @@ async function checkAndNotify(client, guildId, minutesBefore) {
   const now = Math.floor(Date.now() / 1000);
   const thresholdSeconds = minutesBefore * 60;
 
-  for (const dateStr of [dateStrUTC(0), dateStrUTC(1)]) {
+  for (const dateStr of [gameDayStr(0), gameDayStr(1)]) {
     const slots = getSlotsWithHealers(dateStr);
 
     for (const slot of slots) {

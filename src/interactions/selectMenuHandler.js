@@ -1,4 +1,4 @@
-const { generateSlotsForDate, slotsInBlock, BLOCKS, dateStrUTC, formatSlotDateTime } = require("../slotUtils");
+const { generateSlotsForDate, slotsInBlock, BLOCKS, gameDayStr, formatSlotDateTime } = require("../slotUtils");
 const {
   setHealerAvailabilityForBlock,
   getHealerSlotIdsForUser,
@@ -65,7 +65,7 @@ async function handleSelectMenu(interaction) {
       finalSelection
     );
 
-    const dayOffset = dateStr === dateStrUTC(0) ? 0 : 1;
+    const dayOffset = dateStr === gameDayStr(0) ? 0 : 1;
     const payload = buildConquestMessage(interaction, dayOffset);
     await interaction.update(payload);
 
@@ -157,7 +157,7 @@ async function handleSelectMenu(interaction) {
       }
     }
 
-    const dayOffset = dateStr === dateStrUTC(0) ? 0 : 1;
+    const dayOffset = dateStr === gameDayStr(0) ? 0 : 1;
     const payload = buildConquestMessage(interaction, dayOffset);
     await interaction.update(payload);
 

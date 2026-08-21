@@ -20,7 +20,10 @@ const drafts = new Map();
 function getDraft(guildId) {
   if (!drafts.has(guildId)) {
     const existing = getGuildSettings(guildId) || {};
-    drafts.set(guildId, { ...existing });
+    drafts.set(guildId, {
+      ...existing,
+      nemesis_ping_enabled: existing.nemesis_ping_enabled == null ? 1 : existing.nemesis_ping_enabled,
+    });
   }
   return drafts.get(guildId);
 }
@@ -59,13 +62,17 @@ function buildStep1Message(guildId) {
 
 function buildStep2Message(guildId) {
   const draft = getDraft(guildId);
+  const pingEnabled = !!draft.nemesis_ping_enabled;
 
   const embed = new EmbedBuilder()
-    .setTitle("⚙️ Guild Boss Bot Setup — Step 2/2: Channels")
+    .setTitle("⚙️ Guild Boss Bot Setup — Step 2/2: Channels & alerts")
     .setDescription(
-      "Pick the channels used for automatic messages.\n\n" +
+      "Pick the channels used for automatic messages, and (optionally) a role " +
+        "to ping whenever a new session is announced.\n\n" +
         `🔔 **Notifications** — ${draft.notify_channel_id ? `<#${draft.notify_channel_id}>` : "_not set_"}\n` +
-        `✅ **Ready checks** — ${draft.ready_channel_id ? `<#${draft.ready_channel_id}>` : "_defaults to the notifications channel_"}`
+        `✅ **Ready checks** — ${draft.ready_channel_id ? `<#${draft.ready_channel_id}>` : "_defaults to the notifications channel_"}\n` +
+        `📣 **Session-alert role** — ${draft.nemesis_role_id ? `<@&${draft.nemesis_role_id}>` : "_none (optional)_"} ` +
+        `(${pingEnabled ? "🔔 ping enabled" : "🔕 ping disabled"})`
     )
     .setColor(0x5865f2);
 
@@ -89,22 +96,41 @@ function buildStep2Message(guildId) {
       .setDefaultChannels(draft.ready_channel_id ? [draft.ready_channel_id] : [])
   );
 
+  const nemesisRow = new ActionRowBuilder().addComponents(
+    new RoleSelectMenuBuilder()
+      .setCustomId("setup_nemesis_role")
+      .setPlaceholder("📣 Role to ping on new sessions (optional)")
+      .setMinValues(0)
+      .setMaxValues(1)
+      .setDefaultRoles(draft.nemesis_role_id ? [draft.nemesis_role_id] : [])
+  );
+
   const buttonRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId("setup_back").setLabel("◀ Back").setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId("setup_toggle_nemesis_ping")
+      .setLabel(pingEnabled ? "🔕 Disable ping" : "🔔 Enable ping")
+      .setStyle(pingEnabled ? ButtonStyle.Danger : ButtonStyle.Success),
     new ButtonBuilder().setCustomId("setup_save").setLabel("💾 Save").setStyle(ButtonStyle.Success)
   );
 
-  return { embeds: [embed], components: [notifyRow, readyRow, buttonRow] };
+  return { embeds: [embed], components: [notifyRow, readyRow, nemesisRow, buttonRow] };
 }
 
 async function handleRoleSelect(interaction) {
+  const draft = getDraft(interaction.guildId);
+
+  if (interaction.customId === "setup_nemesis_role") {
+    draft.nemesis_role_id = interaction.values[0] || null;
+    await interaction.update(buildStep2Message(interaction.guildId));
+    return;
+  }
+
   const classKey = interaction.customId.replace("setup_role_", "");
   const cls = CLASS_LIST.find((c) => c.key === classKey);
   if (!cls) return;
 
-  const draft = getDraft(interaction.guildId);
   draft[cls.settingsField] = interaction.values[0];
-
   await interaction.update(buildStep1Message(interaction.guildId));
 }
 
@@ -128,6 +154,13 @@ async function handleSetupButton(interaction) {
 
   if (id === "setup_back") {
     await interaction.update(buildStep1Message(interaction.guildId));
+    return;
+  }
+
+  if (id === "setup_toggle_nemesis_ping") {
+    const draft = getDraft(interaction.guildId);
+    draft.nemesis_ping_enabled = draft.nemesis_ping_enabled ? 0 : 1;
+    await interaction.update(buildStep2Message(interaction.guildId));
     return;
   }
 
@@ -157,7 +190,9 @@ async function handleSetupButton(interaction) {
       .setDescription(
         CLASS_LIST.map((c) => `${c.emoji} **${c.name}** — <@&${draft[c.settingsField]}>`).join("\n") +
           `\n\n🔔 Notifications — <#${draft.notify_channel_id}>\n` +
-          `✅ Ready checks — <#${draft.ready_channel_id}>\n\n` +
+          `✅ Ready checks — <#${draft.ready_channel_id}>\n` +
+          `📣 Session-alert role — ${draft.nemesis_role_id ? `<@&${draft.nemesis_role_id}>` : "_none_"} ` +
+          `(${draft.nemesis_ping_enabled ? "🔔 ping enabled" : "🔕 ping disabled"})\n\n` +
           "Run `/setup` again anytime to change these settings."
       )
       .setColor(0x57f287);

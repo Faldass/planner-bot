@@ -2,8 +2,8 @@ require("dotenv").config();
 const { Client, GatewayIntentBits, Collection } = require("discord.js");
 const cron = require("node-cron");
 
-const { ensureSlotsForDate } = require("./db");
-const { dateStrUTC, generateSlotsForDate } = require("./slotUtils");
+const { ensureSlotsForDate, cleanupOldData } = require("./db");
+const { gameDayStr, generateSlotsForDate } = require("./slotUtils");
 const { handleSelectMenu } = require("./interactions/selectMenuHandler");
 const { handleButton } = require("./interactions/buttonHandler");
 const { handleRoleSelect, handleChannelSelect } = require("./interactions/setupWizard");
@@ -26,20 +26,43 @@ for (const cmd of [conquest, setup]) {
 
 function ensureTodayAndTomorrow() {
   for (const offset of [0, 1]) {
-    const dateStr = dateStrUTC(offset);
+    const dateStr = gameDayStr(offset);
     ensureSlotsForDate(generateSlotsForDate(dateStr));
   }
-  console.log(`[slots] Slots ensured for ${dateStrUTC(0)} and ${dateStrUTC(1)}`);
+  console.log(`[slots] Slots ensured for ${gameDayStr(0)} and ${gameDayStr(1)}`);
 }
 
 client.once("ready", () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
   ensureTodayAndTomorrow();
 
-  // Every day at 00:05 UTC: generate slots for the new "tomorrow".
-  cron.schedule("5 0 * * *", () => {
-    ensureTodayAndTomorrow();
-  });
+  const deleted = cleanupOldData();
+  if (deleted > 0) console.log(`[cleanup] Removed ${deleted} old slot(s) on startup.`);
+
+  // Every day at 15:01 Europe/Paris (just after the game's own 15:00 reset):
+  // generate slots for the new game-day cycle. node-cron's timezone option
+  // handles the CET/CEST switch automatically, so this always fires at the
+  // right UTC instant.
+  cron.schedule(
+    "1 15 * * *",
+    () => {
+      ensureTodayAndTomorrow();
+    },
+    { timezone: "Europe/Paris" }
+  );
+
+  // Every day at 15:05 Europe/Paris (just after the slots above are
+  // regenerated): wipe everything except today and tomorrow's game-day —
+  // old slots, availabilities, signups, and notification/ready-check
+  // history. Guild settings from /setup are never touched.
+  cron.schedule(
+    "5 15 * * *",
+    () => {
+      const removed = cleanupOldData();
+      console.log(`[cleanup] Removed ${removed} old slot(s).`);
+    },
+    { timezone: "Europe/Paris" }
+  );
 
   startNotifier(client, {
     guildId: GUILD_ID,

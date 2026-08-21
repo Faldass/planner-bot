@@ -1,37 +1,67 @@
 # Guild Boss Planner Bot
 
-A Discord bot that organizes guild boss attack slots (2x/day) across 4
-classes — **Sage** (healer), **Chevalier** (tank), **Sorcier** (DPS) and
-**Duelliste** (DPS) — handling different player timezones and healer
-availability automatically.
+A Discord bot that organizes guild boss attack sessions (2 per game-day
+cycle) across 4 classes — **Sage** (healer), **Chevalier** (tank),
+**Sorcier** (DPS) and **Duelliste** (DPS) — handling different player
+timezones and healer availability automatically.
 
 ## How it works
 
 There are only **two commands**:
 
 - `/setup` (admin only) — configure the bot once: which Discord role
-  corresponds to each class, and which channels to use, through Discord's
-  own role/channel picker menus.
+  corresponds to each class, which channels to use, and (optionally) a role
+  to ping when a new session is announced — all through Discord's own
+  role/channel picker menus.
 - `/conquest` — everyone's single entry point. It always shows the same
-  planning list (every slot that has a Sage available, with the class logo
-  of every player signed up, and your own slots marked 🟢 so you can spot
-  them instantly), and adapts what's below it to your class:
-  - **Sage**: gets the availability menus (same as the old
-    `/healer-availability`) to create up to **2 slots/day**. Sages don't get
-    a sign-up menu, since it's their own slots — the 🟢 markers already show
-    which ones they made available.
+  planning list (every session that has a Sage available, with the class
+  logo of every player signed up, and your own sessions marked 🟢 so you
+  can spot them instantly), and adapts what's below it to your class:
+  - **Sage**: gets the availability menus to create up to **2
+    sessions per game-day cycle**. Sages don't get a sign-up menu, since
+    it's their own sessions — the 🟢 markers already show which ones they
+    made available.
   - **Everyone else** (Chevalier, Sorcier, Duelliste): gets the sign-up menu
-    to pick up to **2 existing slots/day**.
+    to pick up to **2 existing sessions per game-day cycle**.
+
+### The game-day cycle (15:00 Paris reset)
+
+The "2 sessions per day" limit isn't tied to the UTC calendar day — it
+follows the game's own daily reset at **15:00 Europe/Paris time** (the bot
+automatically adjusts for CET/CEST, so this stays correct year-round without
+any manual change). A "game-day" runs from one 15:00 Paris reset to the
+next. For example: if you've used 1 of your 2 attempts today by creating a
+session at 12:30 (before the 15:00 reset), you can still create 2 brand new
+sessions at 21:30 and 23:00 that same evening — because the 15:00 reset
+already started a fresh game-day cycle with 2 new attempts, independent of
+the one that ended at 15:00. The "Today"/"Tomorrow" buttons in `/conquest`
+switch between the current and next game-day cycle accordingly.
+
+### New session announcements
+
+Whenever a Sage adds a session, the bot posts an announcement in the
+notification channel:
+- The date and time are shown first, in bold, using Discord's own automatic
+  date/time formatting — so it's the first thing anyone sees, and it
+  displays correctly in each viewer's own language and timezone.
+- If a session-alert role was set in `/setup`, it's pinged directly in the
+  message so members see it immediately.
+- A **Sign up for this session** button lets any player join with a single
+  click — no need to open `/conquest`. Clicking again removes them.
 
 On top of that:
-- A reminder is posted automatically a few minutes before each slot that
+- A reminder is posted automatically a few minutes before each session that
   has signups.
-- When a slot **starts**, the bot posts an "I'm ready!" button so
+- When a session **starts**, the bot posts an "I'm ready!" button so
   participants can mark themselves present, with their class logo shown
   next to their name.
-- If a Sage removes their last availability on a slot that already has
+- If a Sage removes their last availability on a session that already has
   players signed up, those signups are cancelled automatically and the
-  affected players are notified.
+  affected players are notified in the notification channel, mentioned by
+  name.
+- Every day, shortly after the 15:00 Paris reset, the bot automatically
+  clears out old sessions (and their signups/availabilities/history),
+  keeping only the current and next game-day cycle.
 
 All times are stored in UTC and shown automatically in each player's local
 timezone thanks to Discord's dynamic timestamps — nobody needs to configure
@@ -146,17 +176,23 @@ directly on Discord:
                               [ Next ▶ ]
    ```
    Pick the matching Discord role in each dropdown, then click **Next ▶**.
-5. **Step 2/2** shows the channel pickers:
+5. **Step 2/2** shows the channel pickers and the optional alert role:
    ```
-   ⚙️ Guild Boss Bot Setup — Step 2/2: Channels
+   ⚙️ Guild Boss Bot Setup — Step 2/2: Channels & alerts
 
    🔔 Notification channel      [ ▼ #guild-boss ]
    ✅ Ready-check channel (opt) [ ▼ #guild-boss ]
+   📣 Session-alert role (opt)  [ ▼ @Nemesis ]
 
-                    [ ◀ Back ]  [ 💾 Save ]
+        [ ◀ Back ]  [ 🔕 Disable ping ]  [ 💾 Save ]
    ```
    Pick your channel(s) — leave the ready-check one empty to reuse the
-   notification channel — and click **💾 Save**.
+   notification channel. The session-alert role is optional: pick it (e.g.
+   `@Nemesis`) if you want that role pinged every time a Sage announces a
+   new session, for maximum visibility. The middle button toggles the ping
+   on/off without forgetting which role you picked — handy if you want to
+   temporarily silence it without unselecting the role. Click **💾 Save**
+   when done.
 6. Done! Re-run `/setup` anytime to change any of this later — no restart
    needed, changes apply immediately.
 

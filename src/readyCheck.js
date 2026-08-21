@@ -1,5 +1,5 @@
 const cron = require("node-cron");
-const { dateStrUTC } = require("./slotUtils");
+const { gameDayStr } = require("./slotUtils");
 const {
   getSlotsWithHealers,
   getSlotParticipants,
@@ -40,7 +40,7 @@ async function checkSlotsStarting(client, guildId) {
   const channelId = settings.ready_channel_id || settings.notify_channel_id;
   const now = Math.floor(Date.now() / 1000);
 
-  for (const dateStr of [dateStrUTC(0), dateStrUTC(1)]) {
+  for (const dateStr of [gameDayStr(0), gameDayStr(1)]) {
     const slots = getSlotsWithHealers(dateStr);
 
     for (const slot of slots) {
