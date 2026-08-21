@@ -1,5 +1,6 @@
 const Database = require("better-sqlite3");
 const path = require("path");
+const { gameDayStr } = require("./slotUtils");
 const fs = require("fs");
 
 const dataDir = path.join(__dirname, "..", "data");
